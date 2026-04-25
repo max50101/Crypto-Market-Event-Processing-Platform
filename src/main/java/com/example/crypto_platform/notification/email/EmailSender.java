@@ -1,4 +1,9 @@
-package com.example.crypto_platform.notification.email;
+package com.example.crypto_platform.notification.email.resend;
 
-public class EmailSender {
+import com.example.crypto_platform.common.event.AlertTriggeredEvent;
+import com.resend.core.exception.ResendException;
+
+public interface EmailSender {
+    void send(AlertTriggeredEvent event) throws ResendException;
+    void sendEmail(String text, String subject,String email) throws ResendException;
 }
