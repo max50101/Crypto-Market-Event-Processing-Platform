@@ -1,10 +1,10 @@
-package com.example.crypto_platform.user;
+package com.example.crypto_platform.user.entity;
 
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name="user")
+@Table(name="users")
 @NoArgsConstructor
 public class User {
     @Id
@@ -17,7 +17,7 @@ public class User {
     @Column(name="telegram_chat_id", nullable = false)
     private Long telegramChatId;
 
-    @Column(name="telegram_username")
+    @Column(name="telegram_user_name")
     private String telegramUserName;
 
     @Enumerated(EnumType.STRING)
@@ -31,7 +31,6 @@ public class User {
     public void setUserRole(UserRole userRole) {
         this.userRole = userRole;
     }
-
 
     public String getEmail() {
         return email;

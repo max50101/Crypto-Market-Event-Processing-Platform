@@ -1,21 +1,23 @@
-package com.example.crypto_platform.notification.email.telegram_email;
+package com.example.crypto_platform.notification.email.telegram_email.sevice;
 
 import com.example.crypto_platform.common.exception.EmailVerificationException;
 import com.example.crypto_platform.common.exception.ResourseNotFoundException;
 import com.example.crypto_platform.common.properties.AppProperties;
 import com.example.crypto_platform.notification.email.EmailSender;
+import com.example.crypto_platform.notification.email.telegram_email.entity.EmailVerificationToken;
+import com.example.crypto_platform.notification.email.telegram_email.repository.EmailVerificationTokenRepository;
+import com.example.crypto_platform.notification.email.telegram_email.event.EmailVerifiedEvent;
 import com.example.crypto_platform.user.UserService;
 import com.example.crypto_platform.user.entity.User;
 import com.resend.core.exception.ResendException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.UUID;
 
 @Service
@@ -26,6 +28,8 @@ public class EmailVerificationService {
     private final EmailSender sender;
     private final EmailVerificationTokenRepository tokenRepository;
     private final AppProperties appProperties;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void startVerification(User user, String email){
@@ -69,6 +73,7 @@ public class EmailVerificationService {
         userService.save(user);
         token.setUsed(true);
         tokenRepository.save(token);
+        eventPublisher.publishEvent(new EmailVerifiedEvent(user.getTelegramChatId(),user.getEmail()));
 
     }
 }

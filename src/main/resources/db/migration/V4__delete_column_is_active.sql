@@ -1,0 +1,1 @@
+ALTER TABLE alert_rule DROP COLUMN is_active;

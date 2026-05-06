@@ -1,4 +1,4 @@
-package com.example.crypto_platform.notification.email.telegram_email;
+package com.example.crypto_platform.notification.email.telegram_email.entity;
 
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;

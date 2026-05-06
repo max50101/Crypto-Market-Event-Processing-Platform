@@ -1,4 +1,4 @@
-package com.example.crypto_platform.notification.email.resend;
+package com.example.crypto_platform.notification.email;
 
 import com.example.crypto_platform.common.event.AlertTriggeredEvent;
 import com.resend.core.exception.ResendException;

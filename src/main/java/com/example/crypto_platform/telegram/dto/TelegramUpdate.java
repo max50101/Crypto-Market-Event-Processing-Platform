@@ -1,4 +1,7 @@
 package com.example.crypto_platform.telegram.dto;
 
-public record TelegramUpdate() {
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record TelegramUpdate(@JsonProperty("update_id") Long updateId, TelegramMessage message,
+                             @JsonProperty("callback_query") TelegramCallbackQuarry callbackQuarry) {
 }

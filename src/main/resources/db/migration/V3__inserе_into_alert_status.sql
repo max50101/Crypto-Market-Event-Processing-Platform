@@ -1,4 +1,4 @@
-INSERT INTO alerts (user_id, symbol, condition_type, target_price, status)
+INSERT INTO alert_rule (user_id, symbol, condition_type, target_value, status)
 VALUES
     (1, 'BTCUSDT', 'ABOVE', 70000.00000000, 'ACTIVE'),
     (2, 'BTCUSDT', 'BELOW', 60000.00000000, 'ACTIVE'),

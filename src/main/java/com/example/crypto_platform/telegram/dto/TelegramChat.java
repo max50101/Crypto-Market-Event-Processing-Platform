@@ -1,4 +1,4 @@
 package com.example.crypto_platform.telegram.dto;
 
-public record TelegramChat() {
+public record TelegramChat(Long id,String username) {
 }

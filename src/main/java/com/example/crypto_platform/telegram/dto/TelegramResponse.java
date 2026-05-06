@@ -1,4 +1,6 @@
 package com.example.crypto_platform.telegram.dto;
 
-public class TelegramResponse {
+import java.util.List;
+
+public record TelegramResponse(boolean ok, List<TelegramUpdate> result) {
 }
