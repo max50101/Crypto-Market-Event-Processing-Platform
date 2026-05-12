@@ -1,7 +1,7 @@
 package com.example.crypto_platform.market.controller;
 
-import com.example.crypto_platform.market.dto.PriceUpdatedEvent;
-import com.example.crypto_platform.market.service.MarketEventProducer;
+import com.example.crypto_platform.common.event.PriceUpdatedEvent;
+import com.example.crypto_platform.market.messaging.MarketEventProducer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

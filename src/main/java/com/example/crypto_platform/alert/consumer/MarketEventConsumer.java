@@ -1,13 +1,10 @@
-package com.example.crypto_platform.market.service;
+package com.example.crypto_platform.alert.consumer;
 
-import com.example.crypto_platform.market.dto.PriceUpdatedEvent;
-import lombok.RequiredArgsConstructor;
+import com.example.crypto_platform.alert.processor.AlertProcessor;
+import com.example.crypto_platform.alert.service.AlertService;
+import com.example.crypto_platform.common.event.PriceUpdatedEvent;
 
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
@@ -15,8 +12,12 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class MarketEventConsumer {
-    @KafkaListener(topics = "${app.kafka.topics.price-updated}")
+    private final AlertProcessor alertProcessor;
+    public MarketEventConsumer(AlertProcessor alertService){
+        this.alertProcessor=alertService;
+    }
+    @KafkaListener(topics = "${app.kafka.topics.price-updated}",groupId = "alert-processor",containerFactory = "priceUpdatedEventConcurrentKafkaListenerContainerFactory")
     public void listen(PriceUpdatedEvent event){
-        log.info("Price: symbol={}, price ={}",event.symbol(),event.price());
+        alertProcessor.processPriceUpdate(event);
     }
 }

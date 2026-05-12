@@ -1,5 +1,5 @@
 package com.example.crypto_platform.alert.entity;
 
-public enum CondtionType {
+public enum ConditionType {
     ABOVE, BELOW
 }

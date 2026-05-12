@@ -1,4 +1,4 @@
-package com.example.crypto_platform.market.dto;
+package com.example.crypto_platform.common.event;
 
 import java.math.BigDecimal;
 import java.time.Instant;

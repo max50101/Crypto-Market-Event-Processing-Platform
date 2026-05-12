@@ -1,4 +1,4 @@
-package com.example.crypto_platform.notification.consumer.integration.config;
+package com.example.crypto_platform.notification.integration.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,7 +9,10 @@ import org.springframework.messaging.MessageChannel;
 public class IntegrationConfig {
 
     @Bean
-    public MessageChannel notificationChannel(){
+    public MessageChannel alertTriggeredChannel(){
         return new DirectChannel();
     }
+
+    @Bean
+    public MessageChannel subscriptionDueChannel(){return new DirectChannel();}
 }
