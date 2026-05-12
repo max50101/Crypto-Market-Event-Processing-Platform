@@ -34,18 +34,30 @@ public class BinanceWebSocketClient {
             subscription.dispose();
         }
     }
+
     @PostConstruct
-    public void openConnect(){
-        String url=binanceProperties.buildCombinedTradeStreamUrl();
-        subscription=Mono.defer(()->connectOnce(url))
-                .doOnSubscribe(s->log.info("Started Binance WS client : {}",url))
+    public void openConnect() {
+        String url = binanceProperties.buildCombinedTradeStreamUrl();
+
+        subscription = Mono.defer(() ->
+                        connectOnce(url)
+                                .then(Mono.<Void>error(
+                                        new IllegalStateException("Binance WS completed normally")
+                                ))
+                )
                 .retryWhen(
                         Retry.fixedDelay(Long.MAX_VALUE, Duration.ofSeconds(5))
-                                .doBeforeRetry(signal->{
-                                    log.warn("Binance WS reconnect attempt: {}",signal.totalRetries()+1);
-                                })
+                                .doBeforeRetry(signal ->
+                                        log.warn("Binance WS reconnect attempt: {}",
+                                                signal.totalRetries() + 1)
+                                )
                 )
-                .subscribe(null,error->log.error("Binance ws stoppedd with error",error));
+                .subscribe(
+                        null,
+                        error -> log.error("Binance WS stopped permanently", error)
+                );
+
+        log.info("Started Binance WS client: {}", url);
     }
 
     private Mono<Void> connectOnce(String url){

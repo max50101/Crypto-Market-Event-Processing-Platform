@@ -1,6 +1,7 @@
 package com.example.crypto_platform.notification.consumer;
 
 import com.example.crypto_platform.common.event.AlertTriggeredEvent;
+import com.example.crypto_platform.common.event.SubscriptionUpdateEvent;
 import com.example.crypto_platform.notification.integration.NotificationGateway;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -19,5 +20,10 @@ public class NotificationСonsumer {
     public void listen(AlertTriggeredEvent event) {
         gateway.sendNotification(event);
         log.info("Alerts was triggered for notification : {}", event);
+    }
+
+    @KafkaListener(topics = "${app.kafka.topics.subscription-due}", containerFactory = "subscriptionUpdateConcurrentKafkaListenerContainerFactory")
+    public void listen(SubscriptionUpdateEvent event){
+        gateway.sendNotification(event);
     }
 }

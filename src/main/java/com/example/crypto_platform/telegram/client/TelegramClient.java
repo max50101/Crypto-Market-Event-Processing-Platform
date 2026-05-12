@@ -73,6 +73,27 @@ public class TelegramClient {
                 .block();
     }
 
+    public void sendPhotoWithCaption(Long chatId, byte[] imageBytes,String fileName, String caption){
+        ByteArrayResource imageResource =new ByteArrayResource(imageBytes){
+            @Override
+            public String getFilename(){
+                return fileName;
+            }
+        };
+
+        MultipartBodyBuilder bodyBuilder=new MultipartBodyBuilder();
+        bodyBuilder.part("chat_id",chatId);
+        bodyBuilder.part("caption",caption);
+        bodyBuilder.part("photo", imageResource).filename(fileName).contentType(MediaType.IMAGE_PNG);
+        telegramWebClient.post()
+                .uri("/sendPhoto")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
     public List<TelegramUpdate> getUpdates(Long offset){
         TelegramResponse response=telegramWebClient
                 .get()

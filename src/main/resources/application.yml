@@ -37,6 +37,7 @@ app:
     topics:
       price-updated: market.price-updated
       alert-triggered: alert.triggered
+      subscription-due: market.subscription-due
 binance:
   base-url: wss://stream.binance.com:9443
   symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT]

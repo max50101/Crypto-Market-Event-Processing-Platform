@@ -1,10 +1,11 @@
 package com.example.crypto_platform.notification.email.service;
 
 import com.example.crypto_platform.common.event.AlertTriggeredEvent;
+import com.example.crypto_platform.market.feature.subscription.dto.SubscriptionNotificationMessage;
 import org.springframework.stereotype.Service;
 
 @Service
-public class EmailAlertMessageBuilder {
+public class EmailMessageBuilder {
 
     public String build(AlertTriggeredEvent event) {
         return """
@@ -20,7 +21,9 @@ public class EmailAlertMessageBuilder {
                 );
     }
 
-    public String subject() {
+    public String subjectAlert() {
         return "Alert triggered";
     }
+    public String subjectSubscription(){ return "Subscription update";};
+
 }

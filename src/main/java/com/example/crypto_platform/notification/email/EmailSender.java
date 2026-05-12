@@ -6,4 +6,7 @@ import com.resend.core.exception.ResendException;
 public interface EmailSender {
     void send(AlertTriggeredEvent event) throws ResendException;
     void sendEmail(String text, String subject,String email) throws ResendException;
+
+    void sendEmailWithAttachment(String text, String subject,
+                                 byte[] imageBytes, String toEmail) throws ResendException;
 }

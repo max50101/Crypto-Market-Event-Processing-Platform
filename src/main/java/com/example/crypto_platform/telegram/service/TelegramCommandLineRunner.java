@@ -4,11 +4,13 @@ import com.example.crypto_platform.alert.service.AlertService;
 import com.example.crypto_platform.market.feature.chart.ChartService;
 import com.example.crypto_platform.market.feature.currentprice.CurrentPriceQuarryService;
 import com.example.crypto_platform.market.feature.indicators.service.RsiService;
+
+import com.example.crypto_platform.market.feature.subscription.entity.ChartSubscription;
+import com.example.crypto_platform.market.feature.subscription.service.ChartSubscriptionService;
 import com.example.crypto_platform.notification.email.telegram_email.sevice.EmailVerificationService;
 import com.example.crypto_platform.telegram.client.TelegramClient;
 import com.example.crypto_platform.telegram.conversation.TelegramConversationService;
 import com.example.crypto_platform.telegram.conversation.TelegramConversationState;
-
 import com.example.crypto_platform.telegram.conversation.TelegramScenario;
 import com.example.crypto_platform.telegram.conversation.TelegramStep;
 import com.example.crypto_platform.user.entity.User;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -33,17 +36,8 @@ public class TelegramCommandLineRunner {
     private final TelegramConversationService conversationService;
     private final RsiService rsiService;
     private final ChartService chartService;
+    private final ChartSubscriptionService marketSubscriptionService;
 
-    /**
-     * Обычные текстовые сообщения:
-     * /start
-     * /help
-     * /price BTCUSDT
-     * /email test@gmail.com
-     * /create_alert
-     * BTCUSDT
-     * 65000
-     */
     public void run(User user, String text) {
         if (text == null || text.isBlank()) {
             client.sendMessage(user.getTelegramChatId(), "Empty message. Use /help");
@@ -77,17 +71,33 @@ public class TelegramCommandLineRunner {
             return;
         }
 
-        if(command.startsWith("/rsi")) {
-            handleRsi(user,command);
+        if (command.startsWith("/rsi")) {
+            handleRsi(user, command);
+            return;
+        }
+
+        if (command.startsWith("/chart")) {
+            handlePriceChart(user, command);
+            return;
+        }
+
+        if (command.startsWith("/subscribe")) {
+            handleSubscribe(user, command);
+            return;
+        }
+
+        if (command.equals("/subscriptions")) {
+            handleSubscriptions(user);
+            return;
+        }
+
+        if (command.startsWith("/cancel_subscribe")) {
+            handleCancelSubscribe(user, command);
             return;
         }
 
         if (command.equals("/create_alert")) {
             startCreateAlertScenario(user);
-            return;
-        }
-        if(command.startsWith("/chart")){
-            handlePriceChart(user,command);
             return;
         }
 
@@ -105,12 +115,6 @@ public class TelegramCommandLineRunner {
         );
     }
 
-    /**
-     * Callback query от inline-кнопок.
-     *
-     * Например:
-     * callbackData = ALERT_DIRECTION:ABOVE
-     */
     public void runCallback(User user, String callbackData) {
         if (callbackData == null || callbackData.isBlank()) {
             client.sendMessage(
@@ -381,7 +385,8 @@ public class TelegramCommandLineRunner {
                     user.getTelegramChatId(),
                     """
                     Usage:
-                    /price BTCUSDT
+                    /rsi BTCUSDT
+                    /rsi BTCUSDT 15m
                     """
             );
             return;
@@ -389,19 +394,21 @@ public class TelegramCommandLineRunner {
 
         String symbol = parts[1].trim().toUpperCase();
 
-
         try {
-            BigDecimal rsi =
-                    parts.length>2? rsiService.calculateRsi(symbol,parts[2].trim()) :rsiService.calculateRsi(symbol);
+            String interval = parts.length > 2 ? parts[2].trim() : "15m";
+
+            BigDecimal rsi = parts.length > 2
+                    ? rsiService.calculateRsi(symbol, interval)
+                    : rsiService.calculateRsi(symbol);
 
             client.sendMessage(
                     user.getTelegramChatId(),
-                    symbol + " rsi: " + rsi
+                    symbol + " RSI " + interval + ": " + rsi
             );
         } catch (Exception e) {
             client.sendMessage(
                     user.getTelegramChatId(),
-                    "Could not get rsi for " + symbol
+                    "Could not get RSI for " + symbol
             );
         }
     }
@@ -430,22 +437,175 @@ public class TelegramCommandLineRunner {
         );
     }
 
-    private void handlePriceChart(User user, String text){
+    private void handlePriceChart(User user, String text) {
         String[] parts = text.split("\\s+");
-        if(parts.length<2){
+
+        if (parts.length < 2) {
             client.sendMessage(
                     user.getTelegramChatId(),
                     """
                     Usage:
-                    /chart SYMBOL
-                    """);
+                    /chart BTCUSDT
+                    /chart BTCUSDT 15m
+                    """
+            );
+            return;
         }
-        String symbol=parts[1].trim().toUpperCase();
-        client.sendPhoto(user.getTelegramChatId(),
-                parts.length>2?chartService.generatePriceChart(symbol,parts[2].trim())
-                        :chartService.generatePriceChart(symbol,"15m"),"PriceChart");
 
+        String symbol = parts[1].trim().toUpperCase();
+        String interval = parts.length > 2 ? parts[2].trim() : "15m";
 
+        try {
+            byte[] chart = chartService.generatePriceChart(symbol, interval);
+
+            client.sendPhoto(
+                    user.getTelegramChatId(),
+                    chart,
+                    "PriceChart"
+            );
+        } catch (Exception e) {
+            client.sendMessage(
+                    user.getTelegramChatId(),
+                    "Could not generate chart for " + symbol
+            );
+        }
+    }
+
+    private void handleSubscribe(User user, String text) {
+        String[] parts = text.split("\\s+");
+
+        if (parts.length < 4) {
+            client.sendMessage(
+                    user.getTelegramChatId(),
+                    """
+                    Usage:
+                    /subscribe BTCUSDT 15m 1h
+
+                    Examples:
+                    /subscribe BTCUSDT 15m 1h
+                    /subscribe ETHUSDT 5m 5m
+
+                    Format:
+                    /subscribe SYMBOL CHART_INTERVAL SEND_FREQUENCY
+                    """
+            );
+            return;
+        }
+
+        String symbol = parts[1].trim().toUpperCase();
+        String interval = parts[2].trim();
+        String frequency = parts[3].trim();
+
+        try {
+            ChartSubscription subscription = marketSubscriptionService.subscribe(
+                    user,
+                    symbol,
+                    interval,
+                    frequency,
+                    true
+            );
+
+            client.sendMessage(
+                    user.getTelegramChatId(),
+                    "Subscription created ✅\n\n" +
+                            "#" + subscription.getId() + "\n" +
+                            "Symbol: " + subscription.getSymbol() + "\n" +
+                            "Chart interval: " + subscription.getInterval() + "\n" +
+                            "Send every: " + subscription.getFrequencyMinutes() + " minutes"
+            );
+
+        } catch (Exception e) {
+            client.sendMessage(
+                    user.getTelegramChatId(),
+                    "Could not create subscription: " + e.getMessage()
+            );
+        }
+    }
+
+    private void handleSubscriptions(User user) {
+        try {
+            List<ChartSubscription> subscriptions =
+                    marketSubscriptionService.getSubscription(user);
+
+            if (subscriptions.isEmpty()) {
+                client.sendMessage(
+                        user.getTelegramChatId(),
+                        "You have no active subscriptions."
+                );
+                return;
+            }
+
+            StringBuilder message = new StringBuilder("Your active subscriptions:\n\n");
+
+            for (ChartSubscription subscription : subscriptions) {
+                message.append("#")
+                        .append(subscription.getId())
+                        .append(" ")
+                        .append(subscription.getSymbol())
+                        .append(" ")
+                        .append(subscription.getInterval())
+                        .append(" every ")
+                        .append(subscription.getFrequencyMinutes())
+                        .append("m")
+                        .append("\n");
+            }
+
+            message.append("\nTo cancel subscription:\n");
+            message.append("/cancel_subscribe <id>");
+
+            client.sendMessage(
+                    user.getTelegramChatId(),
+                    message.toString()
+            );
+
+        } catch (Exception e) {
+            client.sendMessage(
+                    user.getTelegramChatId(),
+                    "Could not get subscriptions."
+            );
+        }
+    }
+
+    private void handleCancelSubscribe(User user, String text) {
+        String[] parts = text.split("\\s+");
+
+        if (parts.length < 2) {
+            client.sendMessage(
+                    user.getTelegramChatId(),
+                    """
+                    Usage:
+                    /cancel_subscribe 12
+                    """
+            );
+            return;
+        }
+
+        Long subscriptionId;
+
+        try {
+            subscriptionId = Long.valueOf(parts[1]);
+        } catch (NumberFormatException e) {
+            client.sendMessage(
+                    user.getTelegramChatId(),
+                    "Subscription id must be a number."
+            );
+            return;
+        }
+
+        try {
+            marketSubscriptionService.cancelSubscription(user, subscriptionId);
+
+            client.sendMessage(
+                    user.getTelegramChatId(),
+                    "Subscription cancelled ✅ #" + subscriptionId
+            );
+
+        } catch (Exception e) {
+            client.sendMessage(
+                    user.getTelegramChatId(),
+                    "Could not cancel subscription: " + e.getMessage()
+            );
+        }
     }
 
     private void handleStart(User user) {
@@ -457,10 +617,13 @@ public class TelegramCommandLineRunner {
                 Available commands:
 
                 /price BTCUSDT
-                /rise SYMBOL
+                /rsi BTCUSDT 15m
+                /chart BTCUSDT 15m
+                /subscribe BTCUSDT 15m 1h
+                /subscriptions
+                /cancel_subscribe 12
                 /create_alert
                 /email your_email@example.com
-                /chart SYMBOL interval
                 /cancel
                 /help
                 """
@@ -476,16 +639,27 @@ public class TelegramCommandLineRunner {
                 /price BTCUSDT
                 Get current price.
 
+                /rsi BTCUSDT 15m
+                Get RSI by interval. Default interval is 15m.
+
+                /chart BTCUSDT 15m
+                Get price chart.
+
+                /subscribe BTCUSDT 15m 1h
+                Subscribe to chart delivery.
+                Example: send BTCUSDT 15m chart every 1 hour.
+
+                /subscriptions
+                Show your active subscriptions.
+
+                /cancel_subscribe 12
+                Cancel subscription by id.
+
                 /create_alert
-                Create alert step by step.
+                Create price alert step by step.
 
                 /email your_email@example.com
                 Verify email.
-                
-                /rsi symbol (interval)
-                GET RSI by interval (15m default)
-                
-                /chart SYMBOL interval
 
                 /cancel
                 Cancel current scenario.

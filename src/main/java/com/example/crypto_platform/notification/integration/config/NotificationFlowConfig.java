@@ -1,9 +1,10 @@
 package com.example.crypto_platform.notification.integration.config;
 
-import com.example.crypto_platform.notification.email.EmailSender;
-import com.example.crypto_platform.notification.email.service.EmailAlertNotificationSender;
+import com.example.crypto_platform.market.feature.subscription.dto.SubscriptionNotificationMessage;
+import com.example.crypto_platform.market.feature.subscription.service.ChartSubscriptionScheduleService;
+import com.example.crypto_platform.market.feature.subscription.service.SubscriptionNotificationMessageBuilder;
+import com.example.crypto_platform.notification.email.service.EmailNotificationSender;
 import com.example.crypto_platform.notification.telegram.TelegramNotificationSender;
-import com.example.crypto_platform.user.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.dsl.IntegrationFlow;
@@ -12,14 +13,39 @@ import org.springframework.integration.dsl.IntegrationFlow;
 public class NotificationFlowConfig {
 
     @Bean
-    public IntegrationFlow alertTriggeredFlow(EmailAlertNotificationSender emailAlertNotificationSender, TelegramNotificationSender telegramNotificationSender, UserService service){
+    public IntegrationFlow alertTriggeredFlow(EmailNotificationSender emailNotificationSender, TelegramNotificationSender telegramNotificationSender){
         return IntegrationFlow
                 .from("alertTriggeredChannel")
-                //.handle(sender,"send")
                 .publishSubscribeChannel(sub-> sub
                         .subscribe(flow-> flow.handle(telegramNotificationSender,"send"))
-                        .subscribe(flow->flow.handle(emailAlertNotificationSender,"send")))
+                        .subscribe(flow->flow.handle(emailNotificationSender,"send")))
                 .get();
+    }
 
+    @Bean
+    public IntegrationFlow subscriptionDueFlow(EmailNotificationSender emailNotificationSender,
+                                               TelegramNotificationSender telegramNotificationSender,
+                                               SubscriptionNotificationMessageBuilder notificationMessageService,
+                                               ChartSubscriptionScheduleService chartSubscriptionScheduleService){
+        return IntegrationFlow
+                .from("subscriptionDueChannel")
+                .transform(notificationMessageService,"build")
+                .publishSubscribeChannel(sub-> sub
+
+                        .subscribe(flow-> flow.filter("payload.sendTelegram")
+                                .handle(telegramNotificationSender,"send"))
+
+                        .subscribe(flow->flow.filter("payload.sendEmail")
+                                .handle(emailNotificationSender,"send")))
+
+                .handle((payload, headers) -> {
+                    SubscriptionNotificationMessage message =
+                            (SubscriptionNotificationMessage) payload;
+
+                    chartSubscriptionScheduleService.markSent(message.subscriptionId());
+
+                    return null;
+                })
+                .get();
     }
 }

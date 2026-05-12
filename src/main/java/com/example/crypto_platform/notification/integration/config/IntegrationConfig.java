@@ -12,4 +12,7 @@ public class IntegrationConfig {
     public MessageChannel alertTriggeredChannel(){
         return new DirectChannel();
     }
+
+    @Bean
+    public MessageChannel subscriptionDueChannel(){return new DirectChannel();}
 }
